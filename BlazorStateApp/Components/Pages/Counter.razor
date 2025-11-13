@@ -1,0 +1,115 @@
+﻿@page "/counter"
+@using BlazorStateApp.Services
+@inject ComponentStateManager StateManager
+@inject ILogger<Counter> Logger
+@rendermode InteractiveServer
+
+<PageTitle>Counter</PageTitle>
+
+<h1>Counter with State Persistence</h1>
+
+<div class="alert alert-info" role="alert">
+    <strong>Blue-Green Deployment Demo:</strong> This counter's state persists across server restarts!
+    @if (!string.IsNullOrEmpty(StateManager.CircuitId))
+    {
+        <br /><small>Circuit ID: @StateManager.CircuitId</small>
+    }
+</div>
+
+<p role="status">Current count: <strong>@currentCount</strong></p>
+
+<div class="btn-group" role="group">
+    <button class="btn btn-primary" @onclick="IncrementCount">Increment</button>
+    <button class="btn btn-secondary" @onclick="DecrementCount">Decrement</button>
+    <button class="btn btn-warning" @onclick="ResetCount">Reset</button>
+</div>
+
+<div class="mt-3">
+    <button class="btn btn-success" @onclick="SaveState">💾 Save State</button>
+    <button class="btn btn-info" @onclick="LoadState">📂 Load State</button>
+</div>
+
+@if (!string.IsNullOrEmpty(statusMessage))
+{
+    <div class="alert alert-success mt-3" role="alert">
+        @statusMessage
+    </div>
+}
+
+@code {
+    private int currentCount = 0;
+    private string statusMessage = string.Empty;
+    private const string ComponentKey = "Counter";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Logger.LogInformation("Counter component initializing");
+        
+        // Try to load saved state
+        await LoadState();
+    }
+
+    private async Task IncrementCount()
+    {
+        currentCount++;
+        await SaveStateInternal();
+    }
+
+    private async Task DecrementCount()
+    {
+        currentCount--;
+        await SaveStateInternal();
+    }
+
+    private async Task ResetCount()
+    {
+        currentCount = 0;
+        await SaveStateInternal();
+    }
+
+    private async Task SaveState()
+    {
+        await SaveStateInternal();
+        statusMessage = $"State saved! Count: {currentCount}";
+        StateHasChanged();
+        
+        // Clear message after 3 seconds
+        await Task.Delay(3000);
+        statusMessage = string.Empty;
+        StateHasChanged();
+    }
+
+    private async Task SaveStateInternal()
+    {
+        var state = new CounterState { Count = currentCount };
+        await StateManager.SaveComponentStateAsync(ComponentKey, state);
+    }
+
+    private async Task LoadState()
+    {
+        var state = await StateManager.LoadComponentStateAsync<CounterState>(ComponentKey);
+        
+        if (state != null)
+        {
+            currentCount = state.Count;
+            statusMessage = $"State restored! Count: {currentCount}";
+            Logger.LogInformation("Counter state loaded: {Count}", currentCount);
+            
+            // Clear message after 3 seconds
+            await Task.Delay(3000);
+            statusMessage = string.Empty;
+        }
+        else
+        {
+            Logger.LogInformation("No saved state found for Counter");
+        }
+        
+        StateHasChanged();
+    }
+
+    public class CounterState
+    {
+        public int Count { get; set; }
+    }
+}
+
