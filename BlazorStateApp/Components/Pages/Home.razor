@@ -1,0 +1,131 @@
+﻿@page "/"
+
+<PageTitle>Home</PageTitle>
+
+<h1>Blazor Server - Blue-Green Deployment POC</h1>
+
+<div class="alert alert-primary" role="alert">
+    <h4 class="alert-heading">🚀 State Persistence for Zero-Downtime Deployments</h4>
+    <p>
+        This application demonstrates <strong>true blue-green deployment support</strong> with .NET 10 Blazor Server.
+        State persists across complete server restarts using browser localStorage and external state storage.
+    </p>
+</div>
+
+<h2>Architecture</h2>
+
+<div class="alert alert-success" role="alert">
+    <h5>✅ Cross-Server State Persistence</h5>
+    <p>
+        This POC uses a hybrid approach combining .NET 10 with custom state persistence services:
+    </p>
+    <ul>
+        <li><strong>Session IDs in localStorage</strong> - Browser-based session tracking survives page refreshes</li>
+        <li><strong>File-based state storage</strong> - State persists across server restarts (use Redis/DB in production)</li>
+        <li><strong>Graceful shutdown</strong> - State saved before old server terminates</li>
+        <li><strong>Automatic restoration</strong> - New server rehydrates state on reconnection</li>
+    </ul>
+</div>
+
+<h2>How It Works</h2>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">📝 Session Tracking</h5>
+                <p class="card-text">
+                    Each browser gets a unique session ID stored in localStorage.
+                    This ID survives page refreshes and server restarts.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">🔄 State Persistence</h5>
+                <p class="card-text">
+                    Component state is saved to external storage on every change.
+                    File-based for POC, but easily replaceable with Redis/Database.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">🎯 Server Restart</h5>
+                <p class="card-text">
+                    Stop the old server, start a new one - state is automatically
+                    restored using the session ID from localStorage.
+                </p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card mb-3">
+            <div class="card-body">
+                <h5 class="card-title">✨ Zero Downtime</h5>
+                <p class="card-text">
+                    Users experience seamless updates with no data loss or 
+                    interruption to their workflow.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h2>Try It Out</h2>
+
+<ol>
+    <li>Navigate to the <a href="/counter">Counter</a> page</li>
+    <li>Increment the counter several times</li>
+    <li>Note your session ID</li>
+    <li><strong>Stop the server</strong> (Ctrl+C)</li>
+    <li><strong>Restart the server</strong></li>
+    <li>Refresh the page - your count is restored! 🎉</li>
+</ol>
+
+<div class="alert alert-warning" role="alert">
+    <strong>Production Deployment:</strong> Replace FileBasedCircuitStateService with Redis or a database
+    for multi-instance deployments. The session ID approach works across load-balanced servers.
+</div>
+
+<h2>Code Example</h2>
+
+<pre><code>@@inject SessionStateManager SessionStateManager
+
+@@code {
+    private int currentCount = 0;
+    private string? sessionId;
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Get session ID from browser localStorage
+            sessionId = await SessionStateManager.GetSessionIdAsync();
+            
+            // Restore state from external storage
+            var state = await SessionStateManager
+                .LoadComponentStateAsync&lt;CounterState&gt;("Counter");
+            
+            if (state != null)
+                currentCount = state.Count;
+        }
+    }
+    
+    private async Task IncrementCount()
+    {
+        currentCount++;
+        // Save state after each change
+        await SessionStateManager.SaveComponentStateAsync("Counter",
+            new CounterState { Count = currentCount });
+    }
+}</code></pre>
+
+
