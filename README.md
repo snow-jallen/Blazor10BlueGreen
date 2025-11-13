@@ -28,12 +28,31 @@ These APIs handle state during:
 
 ## Quick Start
 
+### Running with .NET
+
 ```bash
 cd BlazorStateApp
 dotnet run
 ```
 
 Navigate to `http://localhost:5000/counter` to see state persistence in action.
+
+### Running with Docker
+
+Build and run the application using Docker:
+
+```bash
+# Build the Docker image
+docker build -t blazor-state-app .
+
+# Run the container
+docker run -p 8080:8080 blazor-state-app
+
+# Or run with environment variables
+docker run -p 8080:8080 -e ASPNETCORE_ENVIRONMENT=Development blazor-state-app
+```
+
+Navigate to `http://localhost:8080/counter` to see state persistence in action.
 
 ## Architecture
 
