@@ -7,25 +7,23 @@
 <div class="alert alert-primary" role="alert">
     <h4 class="alert-heading">🚀 State Persistence for Zero-Downtime Deployments</h4>
     <p>
-        This application demonstrates how to use <strong>.NET 10's built-in Blazor state persistence APIs</strong> 
-        to persist circuit state during blue-green deployments, ensuring a seamless 
-        user experience with no state loss.
+        This application demonstrates <strong>true blue-green deployment support</strong> with .NET 10 Blazor Server.
+        State persists across complete server restarts using browser localStorage and external state storage.
     </p>
 </div>
 
-<h2>What's New in .NET 10</h2>
+<h2>Architecture</h2>
 
-<div class="alert alert-warning" role="alert">
-    <h5>✨ Built-in State Persistence</h5>
+<div class="alert alert-success" role="alert">
+    <h5>✅ Cross-Server State Persistence</h5>
     <p>
-        .NET 10 introduces native state persistence APIs that automatically save and restore component state
-        during circuit evictions, reconnections, and server restarts. No custom services or JavaScript interop required!
+        This POC uses a hybrid approach combining .NET 10 with custom state persistence services:
     </p>
     <ul>
-        <li><code>PersistentComponentState</code> service - Framework state persistence</li>
-        <li><code>RegisterOnPersisting</code> - Hook into state persistence lifecycle</li>
-        <li><code>TryTakeFromJson</code> - Restore persisted state on initialization</li>
-        <li><code>PersistAsJson</code> - Save state when circuit is evicted</li>
+        <li><strong>Session IDs in localStorage</strong> - Browser-based session tracking survives page refreshes</li>
+        <li><strong>File-based state storage</strong> - State persists across server restarts (use Redis/DB in production)</li>
+        <li><strong>Graceful shutdown</strong> - State saved before old server terminates</li>
+        <li><strong>Automatic restoration</strong> - New server rehydrates state on reconnection</li>
     </ul>
 </div>
 
@@ -35,10 +33,10 @@
     <div class="col-md-6">
         <div class="card mb-3">
             <div class="card-body">
-                <h5 class="card-title">📝 Automatic Persistence</h5>
+                <h5 class="card-title">📝 Session Tracking</h5>
                 <p class="card-text">
-                    State registered with <code>RegisterOnPersisting</code> 
-                    is automatically saved when the circuit is evicted and restored on reconnection.
+                    Each browser gets a unique session ID stored in localStorage.
+                    This ID survives page refreshes and server restarts.
                 </p>
             </div>
         </div>
@@ -47,10 +45,10 @@
     <div class="col-md-6">
         <div class="card mb-3">
             <div class="card-body">
-                <h5 class="card-title">🔄 Framework-Level Support</h5>
+                <h5 class="card-title">🔄 State Persistence</h5>
                 <p class="card-text">
-                    Built directly into the Blazor framework - no custom middleware, 
-                    services, or JavaScript required.
+                    Component state is saved to external storage on every change.
+                    File-based for POC, but easily replaceable with Redis/Database.
                 </p>
             </div>
         </div>
@@ -59,10 +57,10 @@
     <div class="col-md-6">
         <div class="card mb-3">
             <div class="card-body">
-                <h5 class="card-title">🎯 Seamless Recovery</h5>
+                <h5 class="card-title">🎯 Server Restart</h5>
                 <p class="card-text">
-                    State is automatically restored when users reconnect after 
-                    server restarts or circuit evictions.
+                    Stop the old server, start a new one - state is automatically
+                    restored using the session ID from localStorage.
                 </p>
             </div>
         </div>
@@ -71,7 +69,7 @@
     <div class="col-md-6">
         <div class="card mb-3">
             <div class="card-body">
-                <h5 class="card-title">✨ Transparent Updates</h5>
+                <h5 class="card-title">✨ Zero Downtime</h5>
                 <p class="card-text">
                     Users experience seamless updates with no data loss or 
                     interruption to their workflow.
@@ -86,43 +84,48 @@
 <ol>
     <li>Navigate to the <a href="/counter">Counter</a> page</li>
     <li>Increment the counter several times</li>
-    <li>Restart the application (simulate blue-green deployment)</li>
-    <li>Refresh the page - your count will be restored automatically!</li>
+    <li>Note your session ID</li>
+    <li><strong>Stop the server</strong> (Ctrl+C)</li>
+    <li><strong>Restart the server</strong></li>
+    <li>Refresh the page - your count is restored! 🎉</li>
 </ol>
 
-<div class="alert alert-success" role="alert">
-    <strong>Production Ready:</strong> .NET 10's built-in state persistence works out of the box 
-    for blue-green deployments. The framework handles serialization, storage, and restoration automatically.
+<div class="alert alert-warning" role="alert">
+    <strong>Production Deployment:</strong> Replace FileBasedCircuitStateService with Redis or a database
+    for multi-instance deployments. The session ID approach works across load-balanced servers.
 </div>
 
 <h2>Code Example</h2>
 
-<pre><code>@@inject PersistentComponentState ApplicationState
-@@implements IDisposable
+<pre><code>@@inject SessionStateManager SessionStateManager
 
 @@code {
     private int currentCount = 0;
-    private PersistingComponentStateSubscription _subscription;
+    private string? sessionId;
     
-    protected override void OnInitialized()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        // Restore state from previous session
-        if (ApplicationState.TryTakeFromJson&lt;int&gt;("count", out var restored))
+        if (firstRender)
         {
-            currentCount = restored;
+            // Get session ID from browser localStorage
+            sessionId = await SessionStateManager.GetSessionIdAsync();
+            
+            // Restore state from external storage
+            var state = await SessionStateManager
+                .LoadComponentStateAsync&lt;CounterState&gt;("Counter");
+            
+            if (state != null)
+                currentCount = state.Count;
         }
-        
-        // Register callback to persist state
-        _subscription = ApplicationState.RegisterOnPersisting(PersistState);
     }
     
-    private Task PersistState()
+    private async Task IncrementCount()
     {
-        ApplicationState.PersistAsJson("count", currentCount);
-        return Task.CompletedTask;
+        currentCount++;
+        // Save state after each change
+        await SessionStateManager.SaveComponentStateAsync("Counter",
+            new CounterState { Count = currentCount });
     }
-    
-    public void Dispose() => _subscription?.Dispose();
 }</code></pre>
 
 
