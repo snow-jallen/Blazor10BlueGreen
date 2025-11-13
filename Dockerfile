@@ -1,5 +1,5 @@
 # Build stage
-FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 
 # Copy project file and restore dependencies
@@ -11,14 +11,14 @@ COPY BlazorStateApp/ BlazorStateApp/
 
 # Build the application
 WORKDIR /src/BlazorStateApp
-RUN dotnet build BlazorStateApp.csproj -c Release -o /app/build
+RUN dotnet build BlazorStateApp.csproj -c Release -o /app/build --no-restore
 
 # Publish stage
 FROM build AS publish
-RUN dotnet publish BlazorStateApp.csproj -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish BlazorStateApp.csproj -c Release -o /app/publish /p:UseAppHost=false --no-restore
 
 # Runtime stage
-FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS final
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 EXPOSE 8080
 EXPOSE 8081
