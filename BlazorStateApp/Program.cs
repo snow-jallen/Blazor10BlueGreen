@@ -11,6 +11,7 @@ builder.Services.AddRazorComponents()
 // Register state persistence services
 builder.Services.AddSingleton<ICircuitStateService, FileBasedCircuitStateService>();
 builder.Services.AddScoped<ComponentStateManager>();
+builder.Services.AddScoped<SessionStateManager>();
 builder.Services.AddScoped<CircuitHandler, StateCircuitHandler>();
 builder.Services.AddHostedService<StatePreservationHostedService>();
 

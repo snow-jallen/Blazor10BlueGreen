@@ -1,6 +1,6 @@
 ﻿@page "/counter"
 @using BlazorStateApp.Services
-@inject ComponentStateManager StateManager
+@inject SessionStateManager SessionStateManager
 @inject ILogger<Counter> Logger
 @rendermode InteractiveServer
 
@@ -10,9 +10,9 @@
 
 <div class="alert alert-info" role="alert">
     <strong>Blue-Green Deployment Demo:</strong> This counter's state persists across server restarts!
-    @if (!string.IsNullOrEmpty(StateManager.CircuitId))
+    @if (!string.IsNullOrEmpty(sessionId))
     {
-        <br /><small>Circuit ID: @StateManager.CircuitId</small>
+        <br /><small>Session ID: @sessionId</small>
     }
 </div>
 
@@ -27,6 +27,7 @@
 <div class="mt-3">
     <button class="btn btn-success" @onclick="SaveState">💾 Save State</button>
     <button class="btn btn-info" @onclick="LoadState">📂 Load State</button>
+    <button class="btn btn-danger" @onclick="ClearSession">🗑️ Clear Session</button>
 </div>
 
 @if (!string.IsNullOrEmpty(statusMessage))
@@ -39,14 +40,22 @@
 @code {
     private int currentCount = 0;
     private string statusMessage = string.Empty;
+    private string? sessionId;
     private const string ComponentKey = "Counter";
 
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        Logger.LogInformation("Counter component initializing");
-        
-        // Try to load saved state
-        await LoadState();
+        if (firstRender)
+        {
+            Logger.LogInformation("Counter component first render");
+            
+            // Get session ID
+            sessionId = await SessionStateManager.GetSessionIdAsync();
+            
+            // Try to load saved state
+            await LoadState();
+            StateHasChanged();
+        }
     }
 
     private async Task IncrementCount()
@@ -82,12 +91,12 @@
     private async Task SaveStateInternal()
     {
         var state = new CounterState { Count = currentCount };
-        await StateManager.SaveComponentStateAsync(ComponentKey, state);
+        await SessionStateManager.SaveComponentStateAsync(ComponentKey, state);
     }
 
     private async Task LoadState()
     {
-        var state = await StateManager.LoadComponentStateAsync<CounterState>(ComponentKey);
+        var state = await SessionStateManager.LoadComponentStateAsync<CounterState>(ComponentKey);
         
         if (state != null)
         {
@@ -104,6 +113,19 @@
             Logger.LogInformation("No saved state found for Counter");
         }
         
+        StateHasChanged();
+    }
+
+    private async Task ClearSession()
+    {
+        await SessionStateManager.ClearSessionAsync();
+        currentCount = 0;
+        sessionId = await SessionStateManager.GetSessionIdAsync();
+        statusMessage = "Session cleared! New session started.";
+        StateHasChanged();
+        
+        await Task.Delay(3000);
+        statusMessage = string.Empty;
         StateHasChanged();
     }
 
