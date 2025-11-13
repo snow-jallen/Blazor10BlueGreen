@@ -1,6 +1,4 @@
 using BlazorStateApp.Components;
-using BlazorStateApp.Services;
-using Microsoft.AspNetCore.Components.Server.Circuits;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,12 +6,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Register state persistence services
-builder.Services.AddSingleton<ICircuitStateService, FileBasedCircuitStateService>();
-builder.Services.AddScoped<ComponentStateManager>();
-builder.Services.AddScoped<SessionStateManager>();
-builder.Services.AddScoped<CircuitHandler, StateCircuitHandler>();
-builder.Services.AddHostedService<StatePreservationHostedService>();
+// .NET 10 includes built-in state persistence APIs - no custom services needed!
+// The framework automatically handles state persistence with [SupplyParameterFromPersistentComponentState]
 
 var app = builder.Build();
 

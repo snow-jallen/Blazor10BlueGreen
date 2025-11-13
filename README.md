@@ -3,23 +3,28 @@ Can we do blue green deploys with blazor state persistence?
 
 ## Yes! ✅
 
-This repository demonstrates a .NET 9 Blazor Server application with circuit state persistence that enables seamless blue-green deployments with zero state loss.
+This repository demonstrates a **.NET 10** Blazor Server application using the new built-in `PersistentComponentState` APIs for state management during circuit reconnections and prerendering.
 
 ## What's Inside
 
-A complete proof-of-concept Blazor Server application (`BlazorStateApp/`) that:
+A proof-of-concept Blazor Server application (`BlazorStateApp/`) built with .NET 10 that:
 
-- ✅ Persists component state automatically using localStorage-based session IDs
-- ✅ Survives server restarts without losing user state
-- ✅ Enables transparent blue-green deployments
-- ✅ Uses file-based storage (easily replaceable with Redis/Database for production)
+- ✅ Uses .NET 10's built-in `PersistentComponentState` service
+- ✅ Demonstrates state persistence during circuit evictions
+- ✅ Shows framework-level state management (no custom services needed)
+- ✅ Simplifies state handling with built-in APIs
 
-## How It Works
+## .NET 10 State Persistence
 
-1. **Session Persistence**: Each user gets a unique session ID stored in browser localStorage
-2. **State Tracking**: Component state is automatically saved with each change
-3. **Graceful Shutdown**: On shutdown, all active circuits save their state
-4. **Automatic Recovery**: On reconnection, state is restored from the session ID
+.NET 10 introduces native Blazor state persistence APIs:
+- `PersistentComponentState` - Framework service for state persistence
+- `RegisterOnPersisting` - Hook into state save lifecycle
+- `TryTakeFromJson` / `PersistAsJson` - Restore and save state
+
+These APIs handle state during:
+- **Circuit evictions** (inactivity, connection loss)
+- **Prerendering** scenarios
+- **Reconnection** events
 
 ## Quick Start
 
@@ -28,32 +33,25 @@ cd BlazorStateApp
 dotnet run
 ```
 
-Navigate to `http://localhost:5000/counter` and try:
-1. Increment the counter several times
-2. Note your session ID
-3. Stop the server (Ctrl+C)
-4. Restart the server
-5. Refresh the page - your counter value is restored! 🎉
+Navigate to `http://localhost:5000/counter` to see state persistence in action.
 
 ## Architecture
 
-See `BlazorStateApp/README.md` for detailed architecture documentation and production deployment guidelines.
+The .NET 10 implementation uses built-in framework APIs instead of custom services:
+- No custom SessionStateManager needed
+- No JavaScript interop required
+- Framework handles serialization automatically
+- Built-in lifecycle hooks for state persistence
 
-## Key Components
+See `BlazorStateApp/README.md` for detailed documentation.
 
-- `ICircuitStateService` - State persistence interface
-- `SessionStateManager` - Browser session tracking with localStorage
-- `FileBasedCircuitStateService` - File-based storage implementation
-- `StateCircuitHandler` - Circuit lifecycle event tracking
-- `StatePreservationHostedService` - Graceful shutdown handler
+## Note on Blue-Green Deployments
 
-## Production Considerations
+The `PersistentComponentState` APIs in .NET 10 are designed for:
+- Circuit reconnection scenarios
+- Prerendering state transfer
+- Handling temporary disconnections
 
-For production deployments, replace the file-based storage with:
-- Redis (recommended)
-- Azure Cache for Redis
-- SQL Database
-- Cosmos DB
+For full blue-green deployment support across server restarts with session continuity, you would still need to implement cross-instance state storage (Redis, database, etc.) as shown in the earlier commits.
 
-See the detailed README in `BlazorStateApp/` for more information.
 

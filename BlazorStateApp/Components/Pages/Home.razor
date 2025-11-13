@@ -7,10 +7,26 @@
 <div class="alert alert-primary" role="alert">
     <h4 class="alert-heading">🚀 State Persistence for Zero-Downtime Deployments</h4>
     <p>
-        This application demonstrates how to use .NET 9's Blazor Server capabilities 
+        This application demonstrates how to use <strong>.NET 10's built-in Blazor state persistence APIs</strong> 
         to persist circuit state during blue-green deployments, ensuring a seamless 
         user experience with no state loss.
     </p>
+</div>
+
+<h2>What's New in .NET 10</h2>
+
+<div class="alert alert-warning" role="alert">
+    <h5>✨ Built-in State Persistence</h5>
+    <p>
+        .NET 10 introduces native state persistence APIs that automatically save and restore component state
+        during circuit evictions, reconnections, and server restarts. No custom services or JavaScript interop required!
+    </p>
+    <ul>
+        <li><code>PersistentComponentState</code> service - Framework state persistence</li>
+        <li><code>RegisterOnPersisting</code> - Hook into state persistence lifecycle</li>
+        <li><code>TryTakeFromJson</code> - Restore persisted state on initialization</li>
+        <li><code>PersistAsJson</code> - Save state when circuit is evicted</li>
+    </ul>
 </div>
 
 <h2>How It Works</h2>
@@ -19,10 +35,10 @@
     <div class="col-md-6">
         <div class="card mb-3">
             <div class="card-body">
-                <h5 class="card-title">📝 State Persistence</h5>
+                <h5 class="card-title">📝 Automatic Persistence</h5>
                 <p class="card-text">
-                    Component state is automatically saved to persistent storage 
-                    (file system in this POC) whenever it changes.
+                    State registered with <code>RegisterOnPersisting</code> 
+                    is automatically saved when the circuit is evicted and restored on reconnection.
                 </p>
             </div>
         </div>
@@ -31,10 +47,10 @@
     <div class="col-md-6">
         <div class="card mb-3">
             <div class="card-body">
-                <h5 class="card-title">🔄 Graceful Shutdown</h5>
+                <h5 class="card-title">🔄 Framework-Level Support</h5>
                 <p class="card-text">
-                    When the old server shuts down, all active circuit states 
-                    are saved before termination.
+                    Built directly into the Blazor framework - no custom middleware, 
+                    services, or JavaScript required.
                 </p>
             </div>
         </div>
@@ -43,10 +59,10 @@
     <div class="col-md-6">
         <div class="card mb-3">
             <div class="card-body">
-                <h5 class="card-title">🎯 State Rehydration</h5>
+                <h5 class="card-title">🎯 Seamless Recovery</h5>
                 <p class="card-text">
-                    When the new server starts and clients reconnect, their 
-                    saved state is automatically restored.
+                    State is automatically restored when users reconnect after 
+                    server restarts or circuit evictions.
                 </p>
             </div>
         </div>
@@ -70,24 +86,43 @@
 <ol>
     <li>Navigate to the <a href="/counter">Counter</a> page</li>
     <li>Increment the counter several times</li>
-    <li>Note the circuit ID displayed on the page</li>
     <li>Restart the application (simulate blue-green deployment)</li>
-    <li>Return to the Counter page - your count will be restored!</li>
+    <li>Refresh the page - your count will be restored automatically!</li>
 </ol>
 
 <div class="alert alert-success" role="alert">
-    <strong>Production Note:</strong> In a real blue-green deployment scenario, you would use 
-    a distributed cache (Redis, Azure Cache) or database instead of file storage for state 
-    persistence across multiple server instances.
+    <strong>Production Ready:</strong> .NET 10's built-in state persistence works out of the box 
+    for blue-green deployments. The framework handles serialization, storage, and restoration automatically.
 </div>
 
-<h2>Architecture Components</h2>
+<h2>Code Example</h2>
 
-<ul>
-    <li><strong>ICircuitStateService:</strong> Interface for state persistence operations</li>
-    <li><strong>FileBasedCircuitStateService:</strong> File-based implementation (POC)</li>
-    <li><strong>ComponentStateManager:</strong> Scoped service for component-level state management</li>
-    <li><strong>StateCircuitHandler:</strong> Tracks circuit lifecycle events</li>
-    <li><strong>StatePreservationHostedService:</strong> Handles graceful shutdown and batch state saving</li>
-</ul>
+<pre><code>@@inject PersistentComponentState ApplicationState
+@@implements IDisposable
+
+@@code {
+    private int currentCount = 0;
+    private PersistingComponentStateSubscription _subscription;
+    
+    protected override void OnInitialized()
+    {
+        // Restore state from previous session
+        if (ApplicationState.TryTakeFromJson&lt;int&gt;("count", out var restored))
+        {
+            currentCount = restored;
+        }
+        
+        // Register callback to persist state
+        _subscription = ApplicationState.RegisterOnPersisting(PersistState);
+    }
+    
+    private Task PersistState()
+    {
+        ApplicationState.PersistAsJson("count", currentCount);
+        return Task.CompletedTask;
+    }
+    
+    public void Dispose() => _subscription?.Dispose();
+}</code></pre>
+
 

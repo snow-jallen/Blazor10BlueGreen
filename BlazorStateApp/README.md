@@ -1,33 +1,38 @@
-# Blazor Server State Persistence - Blue-Green Deployment POC
+# Blazor Server State Persistence - .NET 10 POC
 
-This is a proof-of-concept application demonstrating how to implement state persistence in .NET 9 Blazor Server applications to enable seamless blue-green deployments with zero state loss.
+This is a proof-of-concept application demonstrating .NET 10's built-in Blazor state persistence APIs for handling circuit evictions, reconnections, and prerendering scenarios.
 
 ## Overview
 
-In traditional Blazor Server deployments, when you deploy a new version of the application, active user circuits are terminated, causing users to lose their in-memory state. This POC demonstrates how to persist circuit state before shutdown and restore it when the new version starts, making the deployment transparent to users.
+.NET 10 introduces native `PersistentComponentState` APIs that automatically handle state persistence during circuit lifecycle events. This eliminates the need for custom state management services and JavaScript interop.
 
-## Architecture
+## .NET 10 State Persistence APIs
 
-### Core Components
+### Core APIs
 
-1. **ICircuitStateService** - Interface defining state persistence operations
-2. **FileBasedCircuitStateService** - File-based implementation for POC (use Redis/Database in production)
-3. **ComponentStateManager** - Scoped service for managing component-level state
-4. **StateCircuitHandler** - Circuit lifecycle event handler
-5. **StatePreservationHostedService** - Background service that saves all states during application shutdown
+1. **PersistentComponentState** - Framework service injected into components
+2. **RegisterOnPersisting** - Lifecycle hook called when circuit is being evicted
+3. **TryTakeFromJson<T>** - Restores previously persisted state
+4. **PersistAsJson** - Saves state to persistent storage
 
 ### How It Works
 
-1. **State Tracking**: Components register their state with `ComponentStateManager`
-2. **Automatic Persistence**: State is saved to storage whenever it changes
-3. **Graceful Shutdown**: `StatePreservationHostedService` intercepts application shutdown and saves all active circuit states
-4. **State Restoration**: When components initialize, they check for saved state and restore it automatically
-5. **Circuit Tracking**: Each circuit is identified by a unique ID, allowing state to be associated with specific user sessions
+1. **State Registration**: Components register for persistence events in `OnInitialized`
+2. **Automatic Persistence**: Framework calls registered callbacks when circuit is evicted
+3. **State Restoration**: Components check for persisted state on initialization
+4. **Lifecycle Management**: Framework handles serialization and storage automatically
+
+### Use Cases
+
+The built-in APIs are designed for:
+- **Circuit Evictions**: Save state when user is inactive or disconnected
+- **Prerendering**: Transfer state from server to client during SSR
+- **Reconnection**: Restore state when client reconnects after temporary disconnect
 
 ## Running the Application
 
 ### Prerequisites
-- .NET 9 SDK
+- .NET 10 SDK
 
 ### Build and Run
 
@@ -38,15 +43,6 @@ dotnet run
 ```
 
 Navigate to `http://localhost:5000` (or the port shown in the console)
-
-## Testing Blue-Green Deployment
-
-1. **Start the application**
-   ```bash
-   dotnet run
-   ```
-
-2. **Open the application** in your browser
 
 3. **Navigate to the Counter page** (`/counter`)
 
