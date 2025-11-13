@@ -1,16 +1,17 @@
 // Session persistence for blue-green deployments
+// Using sessionStorage instead of localStorage to ensure per-tab isolation
 window.blazorSession = {
     getSessionId: function () {
-        let sessionId = localStorage.getItem('blazor-session-id');
+        let sessionId = sessionStorage.getItem('blazor-circuit-id');
         if (!sessionId) {
             sessionId = this.generateGuid();
-            localStorage.setItem('blazor-session-id', sessionId);
+            sessionStorage.setItem('blazor-circuit-id', sessionId);
         }
         return sessionId;
     },
     
     clearSessionId: function () {
-        localStorage.removeItem('blazor-session-id');
+        sessionStorage.removeItem('blazor-circuit-id');
     },
     
     generateGuid: function () {

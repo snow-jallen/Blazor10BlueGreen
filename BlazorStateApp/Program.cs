@@ -1,6 +1,5 @@
 using BlazorStateApp.Components;
 using BlazorStateApp.Services;
-using Microsoft.AspNetCore.Components.Server.Circuits;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -8,13 +7,9 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// Register state persistence services for blue-green deployments
-// These services enable cross-server state persistence using session IDs stored in browser localStorage
+// Register file-based state persistence for cross-server restart support
 builder.Services.AddSingleton<ICircuitStateService, FileBasedCircuitStateService>();
-builder.Services.AddScoped<ComponentStateManager>();
 builder.Services.AddScoped<SessionStateManager>();
-builder.Services.AddScoped<CircuitHandler, StateCircuitHandler>();
-builder.Services.AddHostedService<StatePreservationHostedService>();
 
 var app = builder.Build();
 
